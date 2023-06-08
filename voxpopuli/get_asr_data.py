@@ -13,7 +13,8 @@ from collections import defaultdict
 
 import torch
 import torchaudio
-from torchaudio.datasets.utils import download_url
+from torchaudio.datasets.utils import _extract_tar
+from torch.hub import download_url_to_file
 
 from voxpopuli import ASR_LANGUAGES, ASR_ACCENTED_LANGUAGES, DOWNLOAD_BASE_URL
 from voxpopuli.utils import multiprocess_run
@@ -28,9 +29,11 @@ def cut_session(info: Tuple[str, Dict[str, List[Tuple[float, float]]]]) -> None:
     duration = waveform.size(1)
     for out_path, timestamps in out_path_to_timestamps.items():
         segment = torch.cat(
-            [waveform[:, int(s * sr): min(int(t * sr), duration)]
-             for s, t in timestamps],
-            dim=1
+            [
+                waveform[:, int(s * sr) : min(int(t * sr), duration)]
+                for s, t in timestamps
+            ],
+            dim=1,
         )
         torchaudio.save(out_path, segment, sr)
 
@@ -43,7 +46,8 @@ def get(args):
     url = f"{DOWNLOAD_BASE_URL}/annotations/asr/asr_{args.lang}.tsv.gz"
     tsv_path = out_root / Path(url).name
     if not tsv_path.exists():
-        download_url(url, out_root.as_posix(), Path(url).name)
+        zip_path = out_root / Path(url).name
+        download_url_to_file(url, zip_path.as_posix(), hash_prefix=None)
     with gzip.open(tsv_path, "rt") as f:
         metadata = [x for x in csv.DictReader(f, delimiter="|")]
     # Get segment into list
@@ -63,14 +67,14 @@ def get(args):
         items[in_path.as_posix()][out_path.as_posix()] = timestamps
         manifest.append(
             (
-             out_path.stem,
-             r["original_text"],
-             r["normed_text"],
-             r["speaker_id"],
-             split,
-             r["gender"],
-             r.get("is_gold_transcript", str(False)),
-             r.get("accent", str(None))
+                out_path.stem,
+                r["original_text"],
+                r["normed_text"],
+                r["speaker_id"],
+                split,
+                r["gender"],
+                r.get("is_gold_transcript", str(False)),
+                r.get("accent", str(None)),
             )
         )
     items = list(items.items())
@@ -78,8 +82,14 @@ def get(args):
     multiprocess_run(items, cut_session)
     # Output per-split manifest
     header = [
-        "id", "raw_text", "normalized_text", "speaker_id", "split",
-        "gender", "is_gold_transcript", "accent"
+        "id",
+        "raw_text",
+        "normalized_text",
+        "speaker_id",
+        "split",
+        "gender",
+        "is_gold_transcript",
+        "accent",
     ]
     for split in SPLITS:
         with open(out_root / f"asr_{split}.tsv", "w") as f_o:
