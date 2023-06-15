@@ -1,3 +1,15 @@
+```
+git clone https://github.com/JSALT2023-FSM/voxpopuli
+cd  voxpopuli
+#git checkout fixes #if you have very new pytorch/torchaudio
+pip install -r requirements.txt
+
+python -m voxpopuli.download_audios --root /exp/jtrmal/voxpopuli --subset asr
+python -m voxpopuli.get_asr_data --root /exp/jtrmal/voxpopuli --lang en
+python -m voxpopuli.get_asr_data --root /exp/jtrmal/voxpopuli --lang en_accented
+python -m voxpopuli.get_lm_data --root /exp/jtrmal/voxpopuli --lang en
+```
+ 
  VoxPopuli
 =====
 [https://aclanthology.org/2021.acl-long.80](https://aclanthology.org/2021.acl-long.80)
